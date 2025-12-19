@@ -240,9 +240,33 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
   for (unsigned i = 0; i != OldNumBuckets; ++i) {
     void *Probe = OldBuckets[i];
     if (!Probe) continue;
-    while (Node *NodeInBucket = GetNextPtr(Probe)) {
+
+    Node *NextNode = GetNextPtr(Probe);
+    if (!NextNode)
+      continue;
+
+    while (true) {
+      Node *NodeInBucket = NextNode;
+
       // Figure out the next link, remove NodeInBucket from the old link.
       Probe = NodeInBucket->getNextInBucket();
+
+      if ((NextNode = GetNextPtr(Probe))) {
+        // Prefetch because of high fetch latency.
+        __builtin_prefetch(NextNode, 0, 2);
+      } else {
+        NodeInBucket->SetNextInBucket(nullptr);
+
+        // Insert the node into the new bucket, after recomputing the hash.
+        InsertNode(
+            NodeInBucket,
+            GetBucketFor(Info.ComputeNodeHash(this, NodeInBucket, TempID),
+                         Buckets, NumBuckets),
+            Info);
+        TempID.clear();
+        break;
+      }
+
       NodeInBucket->SetNextInBucket(nullptr);
 
       // Insert the node into the new bucket, after recomputing the hash.

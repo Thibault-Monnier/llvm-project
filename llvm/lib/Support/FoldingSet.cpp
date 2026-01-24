@@ -253,7 +253,7 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
 
       if ((NextNode = GetNextPtr(Probe))) {
         // Prefetch because of high fetch latency.
-        __builtin_prefetch(NextNode, 0, 2);
+        __builtin_prefetch(NextNode, 0, 3); // Prefetch for read.
       } else {
         NodeInBucket->SetNextInBucket(nullptr);
 

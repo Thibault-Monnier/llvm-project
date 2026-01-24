@@ -253,18 +253,7 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
 
       if ((NextNode = GetNextPtr(Probe))) {
         // Prefetch because of high fetch latency.
-        __builtin_prefetch(NextNode, 0, 3); // Prefetch for read.
-      } else {
-        NodeInBucket->SetNextInBucket(nullptr);
-
-        // Insert the node into the new bucket, after recomputing the hash.
-        InsertNode(
-            NodeInBucket,
-            GetBucketFor(Info.ComputeNodeHash(this, NodeInBucket, TempID),
-                         Buckets, NumBuckets),
-            Info);
-        TempID.clear();
-        break;
+        __builtin_prefetch(NextNode, 0, 3); // Prefetch for reading
       }
 
       NodeInBucket->SetNextInBucket(nullptr);
@@ -275,6 +264,9 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
                               Buckets, NumBuckets),
                  Info);
       TempID.clear();
+
+      if (!NextNode)
+        break;
     }
   }
 

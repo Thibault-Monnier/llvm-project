@@ -239,21 +239,23 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
   FoldingSetNodeID TempID;
   for (unsigned i = 0; i != OldNumBuckets; ++i) {
     void *Probe = OldBuckets[i];
-    if (!Probe) continue;
-
-    Node *NextNode = GetNextPtr(Probe);
-    if (!NextNode)
+    if (!Probe)
       continue;
 
-    while (true) {
+    Node *NextNode = GetNextPtr(Probe);
+
+    while (NextNode) {
       Node *NodeInBucket = NextNode;
 
       // Figure out the next link, remove NodeInBucket from the old link.
       Probe = NodeInBucket->getNextInBucket();
 
       if ((NextNode = GetNextPtr(Probe))) {
-        // Prefetch because of high fetch latency.
+        // Prefetch because of high fetch latency. Works less well on non-x86
+        // architectures.
+#if defined(__x86_64__) || defined(__i386__)
         __builtin_prefetch(NextNode, 0, 3); // Prefetch for reading
+#endif
       }
 
       NodeInBucket->SetNextInBucket(nullptr);
@@ -264,9 +266,6 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
                               Buckets, NumBuckets),
                  Info);
       TempID.clear();
-
-      if (!NextNode)
-        break;
     }
   }
 

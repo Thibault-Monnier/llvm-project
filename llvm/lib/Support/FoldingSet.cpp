@@ -251,11 +251,8 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
       Probe = NodeInBucket->getNextInBucket();
 
       if ((NextNode = GetNextPtr(Probe))) {
-        // Prefetch because of high fetch latency. Works less well on non-x86
-        // architectures.
-#if defined(__x86_64__) || defined(__i386__)
-        __builtin_prefetch(NextNode, 0, 3); // Prefetch for reading
-#endif
+        // Prefetch because of high fetch latency.
+        __builtin_prefetch(NextNode, 0, 3); // Prefetch for reading, high temporal locality.
       }
 
       NodeInBucket->SetNextInBucket(nullptr);
@@ -273,7 +270,6 @@ void FoldingSetBase::GrowBucketCount(unsigned NewBucketCount,
 }
 
 /// GrowHashTable - Double the size of the hash table and rehash everything.
-///
 void FoldingSetBase::GrowHashTable(const FoldingSetInfo &Info) {
   GrowBucketCount(NumBuckets * 2, Info);
 }

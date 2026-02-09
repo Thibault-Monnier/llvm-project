@@ -1517,17 +1517,17 @@ bool Preprocessor::parseSimpleIntegerLiteral(Token &Tok, uint64_t &Value) {
 }
 
 void Preprocessor::addCommentHandler(CommentHandler *Handler) {
-  assert(Handler && "NULL comment handler");
-  assert(!llvm::is_contained(CommentHandlers, Handler) &&
-         "Comment handler already registered");
-  CommentHandlers.push_back(Handler);
+  // assert(Handler && "NULL comment handler");
+  // assert(!llvm::is_contained(CommentHandlers, Handler) &&
+  //        "Comment handler already registered");
+  // CommentHandlers.push_back(Handler);
 }
 
 void Preprocessor::removeCommentHandler(CommentHandler *Handler) {
-  std::vector<CommentHandler *>::iterator Pos =
-      llvm::find(CommentHandlers, Handler);
-  assert(Pos != CommentHandlers.end() && "Comment handler not registered");
-  CommentHandlers.erase(Pos);
+  // std::vector<CommentHandler *>::iterator Pos =
+  //     llvm::find(CommentHandlers, Handler);
+  // assert(Pos != CommentHandlers.end() && "Comment handler not registered");
+  // CommentHandlers.erase(Pos);
 }
 
 bool Preprocessor::HandleComment(Token &result, SourceRange Comment) {

@@ -1939,27 +1939,23 @@ static const char *fastParseASCIIIdentifierScalar(const char *CurPtr) {
 }
 
 // Fast path for lexing ASCII identifiers using SSE4.2 instructions.
-// Only enabled on x86/x86_64 when building with __SSE4_2__ enabled, or with a
-// compiler and platform that support runtime dispatch.
-#if defined(__SSE4_2__) || LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
-// LLVM_ATTRIBUTE_USED is a hack to suppress a false-positive warning due to a
-// bug in clang-18 and less. See PR175452.
-LLVM_ATTRIBUTE_USED LLVM_TARGET_SSE42 static const char *
-fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
+LLVM_TARGET_SSE42 static const char *
+fastParseASCIIIdentifierSSE42(const char *CurPtr, const char *BufferEnd) {
   alignas(16) static constexpr char AsciiIdentifierRange[16] = {
       '_', '_', 'A', 'Z', 'a', 'z', '0', '9',
   };
   constexpr ssize_t BytesPerRegister = 16;
 
   __m128i AsciiIdentifierRangeV =
-      _mm_load_si128((const __m128i *)AsciiIdentifierRange);
+      _mm_load_si128(reinterpret_cast<const __m128i *>(AsciiIdentifierRange));
 
   while (LLVM_LIKELY(BufferEnd - CurPtr >= BytesPerRegister)) {
-    __m128i Cv = _mm_loadu_si128((const __m128i *)(CurPtr));
+    __m128i Cv = _mm_loadu_si128(reinterpret_cast<const __m128i *>(CurPtr));
 
-    int Consumed = _mm_cmpistri(AsciiIdentifierRangeV, Cv,
-                                _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES |
-                                    _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
+    const int Consumed =
+        _mm_cmpistri(AsciiIdentifierRangeV, Cv,
+                     _SIDD_LEAST_SIGNIFICANT | _SIDD_CMP_RANGES |
+                         _SIDD_UBYTE_OPS | _SIDD_NEGATIVE_POLARITY);
     CurPtr += Consumed;
     if (Consumed == BytesPerRegister)
       continue;
@@ -1968,16 +1964,13 @@ fastParseASCIIIdentifier(const char *CurPtr, const char *BufferEnd) {
 
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
-#endif
 
-#ifndef __SSE4_2__
-#if LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
-LLVM_TARGET_DEFAULT
-#endif
-static const char *fastParseASCIIIdentifier(const char *CurPtr, const char *) {
+static const char *fastParseASCIIIdentifier(const char *CurPtr,
+                                            const char *BufferEnd) {
+  if (LLVM_LIKELY(LLVM_CPU_SUPPORTS_SSE42))
+    return fastParseASCIIIdentifierSSE42(CurPtr, BufferEnd);
   return fastParseASCIIIdentifierScalar(CurPtr);
 }
-#endif
 
 bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
   // Match [_A-Za-z0-9]*, we have already matched an identifier start.

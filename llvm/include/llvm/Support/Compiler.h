@@ -763,30 +763,27 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #endif
 // clang-format on
 
-/// \macro LLVM_SUPPORTS_RUNTIME_SSE42_CHECK
-/// Expands to true if runtime detection of SSE4.2 is supported.
-/// This can be used to guard runtime checks for SSE4.2 support.
-#if (defined(__i386__) || defined(__x86_64__)) && defined(__has_attribute) &&  \
-    __has_attribute(target) && (defined(__linux__) || defined(__APPLE__))
-#define LLVM_SUPPORTS_RUNTIME_SSE42_CHECK 1
-#else
-#define LLVM_SUPPORTS_RUNTIME_SSE42_CHECK 0
-#endif
-
-/// \macro LLVM_TARGET_DEFAULT
-/// Function attribute to compile a function with default target features.
-#if defined(__has_attribute) && __has_attribute(target)
-#define LLVM_TARGET_DEFAULT __attribute__((target("default")))
-#else
-#define LLVM_TARGET_DEFAULT
-#endif
-
 /// \macro LLVM_TARGET_SSE42
 /// Function attribute to compile a function with SSE4.2 enabled.
 #if defined(__has_attribute) && __has_attribute(target)
 #define LLVM_TARGET_SSE42 __attribute__((target("sse4.2")))
 #else
 #define LLVM_TARGET_SSE42
+#endif
+
+#if __has_builtin(__builtin_cpu_supports)
+#define LLVM_CPU_SUPPORTS(feature) __builtin_cpu_supports(feature)
+#else
+#define LLVM_CPU_SUPPORTS(feature) 0
+#endif
+
+/// \macro LLVM_CPU_SUPPORTS_SSE42
+/// Expands to true if the runtime cpu supports SSE4.2, or if compiled with
+/// SSE4.2 enabled.
+#if defined(__SSE4_2__)
+#define LLVM_CPU_SUPPORTS_SSE42 1
+#else
+#define LLVM_CPU_SUPPORTS_SSE42 LLVM_CPU_SUPPORTS("sse4.2")
 #endif
 
 #endif
